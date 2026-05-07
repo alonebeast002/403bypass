@@ -13,8 +13,9 @@ A high-performance asynchronous security tool designed to test 403 Forbidden byp
 ### Setup
 ```bash
 # Clone the repository
-git clone https://github.com/alonebeast002/bypass-ghost.git
-cd bypass-ghost
+git clone https://github.com/alonebeast002/403bypass.git
+cd 403bypass/bypassghost
+python3 main.py
 
 # Install required dependencies
 pip install aiohttp rich urllib3
