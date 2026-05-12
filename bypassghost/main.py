@@ -158,25 +158,17 @@ def save_results(results, url, path, output_file):
 async def run_scan(url, path, wordlist=None, concurrency=20, save=True, extra_headers=None):
     console.print(BANNER)
 
-    coffee = (
-        "
-"
-        "[bold cyan]        ( ([/bold cyan]
-"
-        "[bold cyan]         ) )    [/bold cyan]    [bold green]Grab a coffee and relax...[/bold green]
-"
-        "[bold cyan]      ........  [/bold cyan]    [bold cyan]Loading bypass techniques...[/bold cyan]
-"
-        "[bold cyan]      |      |] [/bold cyan]    [bold yellow]Async engine spinning up...[/bold yellow]
-"
-        "[bold cyan]      \\      /  [/bold cyan]    [bold magenta]Header injections armed...[/bold magenta]
-"
-        "[bold cyan]       `----'   [/bold cyan]    [bold green]Ghost is slipping through walls...[/bold green]
-"
-    )
+    # FIXED: Using triple quotes for multi-line string to avoid SyntaxError
+    coffee = """
+[bold cyan]        ( ([/bold cyan]
+[bold cyan]         ) )    [/bold cyan]    [bold green]Grab a coffee and relax...[/bold green]
+[bold cyan]      ........  [/bold cyan]    [bold cyan]Loading bypass techniques...[/bold cyan]
+[bold cyan]      |      |] [/bold cyan]    [bold yellow]Async engine spinning up...[/bold yellow]
+[bold cyan]      \\      /  [/bold cyan]    [bold magenta]Header injections armed...[/bold magenta]
+[bold cyan]       `----'   [/bold cyan]    [bold green]Ghost is slipping through walls...[/bold green]
+"""
     console.print(coffee)
-    console.print("[bold green][+][/bold green] Bypass Ghost v0.0.1 [bold cyan]—[/bold cyan] scan engine active...
-")
+    console.print("[bold green][+][/bold green] Bypass Ghost v0.0.1 [bold cyan]—[/bold cyan] scan engine active...\n")
 
     paths_to_scan = [path]
     if wordlist:
@@ -206,15 +198,11 @@ async def run_scan(url, path, wordlist=None, concurrency=20, save=True, extra_he
         for current_path in paths_to_scan:
             path_techs, header_techs, method_techs = get_techniques(url, current_path)
 
-            # Build all tasks
             tasks = []
-
             for u, label in path_techs:
                 tasks.append(("path", label, u, None, "GET"))
-
             for u, hdrs, label in header_techs:
                 tasks.append(("header", label, u, hdrs, "GET"))
-
             for u, method, label in method_techs:
                 tasks.append(("method", label, u, None, method))
 
@@ -265,7 +253,6 @@ async def run_scan(url, path, wordlist=None, concurrency=20, save=True, extra_he
                     if status == 200:
                         bypassed.append(result)
 
-                    # Only show non-404, non-error in table
                     if status and status != 404:
                         type_color = {
                             "path": "blue",
@@ -283,7 +270,6 @@ async def run_scan(url, path, wordlist=None, concurrency=20, save=True, extra_he
 
             console.print(table)
 
-            # Wayback check
             console.print("[dim]Checking Wayback Machine...[/dim]")
             wb_url, wb_time = await check_wayback(session, url, current_path)
             if wb_url:
@@ -297,14 +283,14 @@ async def run_scan(url, path, wordlist=None, concurrency=20, save=True, extra_he
             else:
                 console.print("[dim]No Wayback Machine snapshot found.[/dim]\n")
 
-    # Summary
     console.print()
     if bypassed:
+        summary_text = "\n".join([
+            f"[bold green]{r['status']}[/bold green]  [{r['type']}] [cyan]{r['technique']}[/cyan]\n   [dim]{r['url']}[/dim]"
+            for r in bypassed
+        ])
         console.print(Panel(
-            "\n".join([
-                f"[bold green]{r['status']}[/bold green]  [{r['type']}] [cyan]{r['technique']}[/cyan]\n   [dim]{r['url']}[/dim]"
-                for r in bypassed
-            ]),
+            summary_text,
             title=f"[bold green]BYPASSED! {len(bypassed)} technique(s) worked[/bold green]",
             border_style="green",
             box=box.DOUBLE
@@ -327,10 +313,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  bypass403 https://example.com admin
-  bypass403 https://example.com admin -w paths.txt
-  bypass403 https://example.com admin --no-save
-  bypass403 https://example.com admin -H "Cookie: session=abc"
+  python3 main.py https://example.com admin
+  python3 main.py https://example.com admin -w paths.txt
+  python3 main.py https://example.com admin --no-save
+  python3 main.py https://example.com admin -H "Cookie: session=abc"
         """
     )
     parser.add_argument("url", help="Target URL (e.g. https://example.com)")
@@ -349,14 +335,17 @@ Examples:
                 k, v = h.split(":", 1)
                 extra_headers[k.strip()] = v.strip()
 
-    asyncio.run(run_scan(
-        args.url,
-        args.path,
-        wordlist=args.wordlist,
-        concurrency=args.concurrency,
-        save=not args.no_save,
-        extra_headers=extra_headers
-    ))
+    try:
+        asyncio.run(run_scan(
+            args.url,
+            args.path,
+            wordlist=args.wordlist,
+            concurrency=args.concurrency,
+            save=not args.no_save,
+            extra_headers=extra_headers
+        ))
+    except KeyboardInterrupt:
+        console.print("\n[bold red][!] Scan interrupted by user.[/bold red]")
 
 
 if __name__ == "__main__":
